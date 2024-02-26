@@ -5,18 +5,16 @@ const cookieSession = require('cookie-session')
 const passport = require('passport')
 require('./models/User')
 require('./services/passport')
+const bodyParser = require('body-parser')
 
 mongoose.connect(keys.mongoURI)
 
 const app = express();
+app.use(bodyParser.json());
 
-// Tells express to make use of cookies in our application
 app.use(
     cookieSession({
-        // How long cookie can exist before expiring in miliseconds (30 days below)
         maxAge: 30 * 24 * 60 * 60 * 1000,
-        // Encrypts the cookie. Its an array so you can provide multiple keys
-        // And a key is randomly chosen
         keys: [keys.cookieKey]
     })
 );
@@ -24,6 +22,20 @@ app.use(passport.initialize());
 app.use(passport.session());
 
 require('./routes/authRoutes')(app);
+require('./routes/billingRoutes')(app)
+
+if(process.env.NODE_ENV === 'production') {
+    // Express will serve up production assests
+    // like our main.js file or main.css file
+    app.use(express.static('client/build'))
+
+    // Express will serve up the index.html file
+    // if it doesn't recognize the route
+    const path = require('path')
+    app.get('*', (req, res) => {
+        res.sendFile(path.resolve(__dirname, 'client', 'build', 'index.html'))
+    })
+}
 
 const PORT = process.env.PORT || 5000;
 app.listen(PORT);
